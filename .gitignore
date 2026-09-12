@@ -1,0 +1,4 @@
+MLmodel/Dataset/
+__pycache__/
+.venv/
+MLmodel/src/predict.py
