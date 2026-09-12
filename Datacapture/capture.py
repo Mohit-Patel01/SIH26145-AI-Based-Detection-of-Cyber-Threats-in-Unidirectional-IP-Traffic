@@ -693,181 +693,182 @@ def calculate_all_features(flow):
 
     return features
 
-print("Starting packet capture...")
+if __name__ == "__main__":
 
-sniff(
-    prn=process_packet,
-    count=100
-)
+    print("Starting packet capture...")
 
-
-print("\nCapture finished.")
-print("Total flows:", len(flows))
-
-
-# -------------------------------------------------
-# CSV OUTPUT
-# -------------------------------------------------
-
-feature_names = [
-    "Destination Port",
-    "Flow Duration",
-    "Total Fwd Packets",
-    "Total Backward Packets",
-    "Total Length of Fwd Packets",
-    "Total Length of Bwd Packets",
-    "Fwd Packet Length Max",
-    "Fwd Packet Length Min",
-    "Fwd Packet Length Mean",
-    "Fwd Packet Length Std",
-    "Bwd Packet Length Max",
-    "Bwd Packet Length Min",
-    "Bwd Packet Length Mean",
-    "Bwd Packet Length Std",
-    "Flow Bytes/s",
-    "Flow Packets/s",
-    "Flow IAT Mean",
-    "Flow IAT Std",
-    "Flow IAT Max",
-    "Flow IAT Min",
-    "Fwd IAT Total",
-    "Fwd IAT Mean",
-    "Fwd IAT Std",
-    "Fwd IAT Max",
-    "Fwd IAT Min",
-    "Bwd IAT Total",
-    "Bwd IAT Mean",
-    "Bwd IAT Std",
-    "Bwd IAT Max",
-    "Bwd IAT Min",
-    "Fwd PSH Flags",
-    "Bwd PSH Flags",
-    "Fwd URG Flags",
-    "Bwd URG Flags",
-    "Fwd Header Length",
-    "Bwd Header Length",
-    "Fwd Packets/s",
-    "Bwd Packets/s",
-    "Min Packet Length",
-    "Max Packet Length",
-    "Packet Length Mean",
-    "Packet Length Std",
-    "Packet Length Variance",
-    "FIN Flag Count",
-    "SYN Flag Count",
-    "RST Flag Count",
-    "PSH Flag Count",
-    "ACK Flag Count",
-    "URG Flag Count",
-    "CWE Flag Count",
-    "ECE Flag Count",
-    "Down/Up Ratio",
-    "Average Packet Size",
-    "Avg Fwd Segment Size",
-    "Avg Bwd Segment Size",
-    "Fwd Header Length.1",
-    "Fwd Avg Bytes/Bulk",
-    "Fwd Avg Packets/Bulk",
-    "Fwd Avg Bulk Rate",
-    "Bwd Avg Bytes/Bulk",
-    "Bwd Avg Packets/Bulk",
-    "Bwd Avg Bulk Rate",
-    "Subflow Fwd Packets",
-    "Subflow Fwd Bytes",
-    "Subflow Bwd Packets",
-    "Subflow Bwd Bytes",
-    "Init_Win_bytes_forward",
-    "Init_Win_bytes_backward",
-    "act_data_pkt_fwd",
-    "min_seg_size_forward",
-    "Active Mean",
-    "Active Std",
-    "Active Max",
-    "Active Min",
-    "Idle Mean",
-    "Idle Std",
-    "Idle Max",
-    "Idle Min"
-]
-print("\nFlow details:")
-
-captured_features = []
-
-for i, flow in enumerate(flows.values(), start=1):
-
-    print(f"\nFlow {i}")
-
-    print(
-        "Source:",
-        flow["source_ip"],
-        ":",
-        flow["source_port"]
+    sniff(
+        prn=process_packet,
+        count=100
     )
 
-    print(
-        "Destination:",
-        flow["destination_ip"],
-        ":",
-        flow["destination_port"]
-    )
+    print("\nCapture finished.")
+    print("Total flows:", len(flows))
 
-    print("Protocol:", flow["protocol"])
+    # -------------------------------------------------
+    # CSV OUTPUT
+    # -------------------------------------------------
 
-    print("Total packets:", len(flow["packets"]))
-    print("Forward packets:", len(flow["fwd_packets"]))
-    print("Backward packets:", len(flow["bwd_packets"]))
-
-    print(
-        "Forward bytes:",
-        sum(flow["fwd_packets"])
-    )
-
-    print(
-        "Backward bytes:",
-        sum(flow["bwd_packets"])
-    )
-
-    features = calculate_all_features(flow)
-
-    captured_features.append(features)
-
-    print("Number of features:", len(features))
-
-print("\nChecking feature count...")
-
-for features in captured_features:
-
-    missing = [
-        feature
-        for feature in feature_names
-        if feature not in features
+    feature_names = [
+        "Destination Port",
+        "Flow Duration",
+        "Total Fwd Packets",
+        "Total Backward Packets",
+        "Total Length of Fwd Packets",
+        "Total Length of Bwd Packets",
+        "Fwd Packet Length Max",
+        "Fwd Packet Length Min",
+        "Fwd Packet Length Mean",
+        "Fwd Packet Length Std",
+        "Bwd Packet Length Max",
+        "Bwd Packet Length Min",
+        "Bwd Packet Length Mean",
+        "Bwd Packet Length Std",
+        "Flow Bytes/s",
+        "Flow Packets/s",
+        "Flow IAT Mean",
+        "Flow IAT Std",
+        "Flow IAT Max",
+        "Flow IAT Min",
+        "Fwd IAT Total",
+        "Fwd IAT Mean",
+        "Fwd IAT Std",
+        "Fwd IAT Max",
+        "Fwd IAT Min",
+        "Bwd IAT Total",
+        "Bwd IAT Mean",
+        "Bwd IAT Std",
+        "Bwd IAT Max",
+        "Bwd IAT Min",
+        "Fwd PSH Flags",
+        "Bwd PSH Flags",
+        "Fwd URG Flags",
+        "Bwd URG Flags",
+        "Fwd Header Length",
+        "Bwd Header Length",
+        "Fwd Packets/s",
+        "Bwd Packets/s",
+        "Min Packet Length",
+        "Max Packet Length",
+        "Packet Length Mean",
+        "Packet Length Std",
+        "Packet Length Variance",
+        "FIN Flag Count",
+        "SYN Flag Count",
+        "RST Flag Count",
+        "PSH Flag Count",
+        "ACK Flag Count",
+        "URG Flag Count",
+        "CWE Flag Count",
+        "ECE Flag Count",
+        "Down/Up Ratio",
+        "Average Packet Size",
+        "Avg Fwd Segment Size",
+        "Avg Bwd Segment Size",
+        "Fwd Header Length.1",
+        "Fwd Avg Bytes/Bulk",
+        "Fwd Avg Packets/Bulk",
+        "Fwd Avg Bulk Rate",
+        "Bwd Avg Bytes/Bulk",
+        "Bwd Avg Packets/Bulk",
+        "Bwd Avg Bulk Rate",
+        "Subflow Fwd Packets",
+        "Subflow Fwd Bytes",
+        "Subflow Bwd Packets",
+        "Subflow Bwd Bytes",
+        "Init_Win_bytes_forward",
+        "Init_Win_bytes_backward",
+        "act_data_pkt_fwd",
+        "min_seg_size_forward",
+        "Active Mean",
+        "Active Std",
+        "Active Max",
+        "Active Min",
+        "Idle Mean",
+        "Idle Std",
+        "Idle Max",
+        "Idle Min"
     ]
 
-    extra = [
-        feature
-        for feature in features
-        if feature not in feature_names
-    ]
+    print("\nFlow details:")
 
-    print("Calculated features:", len(features))
-    print("Expected features:", len(feature_names))
+    captured_features = []
 
-    print("Missing features:", missing)
-    print("Extra features:", extra)
+    for i, flow in enumerate(flows.values(), start=1):
 
-with open("captured_flows.csv", "w", newline="") as file:
+        print(f"\nFlow {i}")
 
-    writer = csv.writer(file)
+        print(
+            "Source:",
+            flow["source_ip"],
+            ":",
+            flow["source_port"]
+        )
 
-    writer.writerow(feature_names)
+        print(
+            "Destination:",
+            flow["destination_ip"],
+            ":",
+            flow["destination_port"]
+        )
+
+        print("Protocol:", flow["protocol"])
+
+        print("Total packets:", len(flow["packets"]))
+        print("Forward packets:", len(flow["fwd_packets"]))
+        print("Backward packets:", len(flow["bwd_packets"]))
+
+        print(
+            "Forward bytes:",
+            sum(flow["fwd_packets"])
+        )
+
+        print(
+            "Backward bytes:",
+            sum(flow["bwd_packets"])
+        )
+
+        features = calculate_all_features(flow)
+
+        captured_features.append(features)
+
+        print("Number of features:", len(features))
+
+    print("\nChecking feature count...")
 
     for features in captured_features:
 
-        row = [
-            features.get(feature, 0)
+        missing = [
+            feature
             for feature in feature_names
+            if feature not in features
         ]
 
-        writer.writerow(row)
+        extra = [
+            feature
+            for feature in features
+            if feature not in feature_names
+        ]
 
-print("\n78-feature CSV created.")
+        print("Calculated features:", len(features))
+        print("Expected features:", len(feature_names))
+
+        print("Missing features:", missing)
+        print("Extra features:", extra)
+
+    with open("captured_flows.csv", "w", newline="") as file:
+
+        writer = csv.writer(file)
+
+        writer.writerow(feature_names)
+
+        for features in captured_features:
+
+            row = [
+                features.get(feature, 0)
+                for feature in feature_names
+            ]
+
+            writer.writerow(row)
+
+    print("\n78-feature CSV created.")
