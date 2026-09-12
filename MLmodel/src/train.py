@@ -91,5 +91,9 @@ print(confusion_matrix(y_test, y_pred))
 
 # Save model
 joblib.dump(model, "models/random_forest.pkl")
+joblib.dump(
+    X.columns.tolist(),
+    "models/feature_names.pkl"
+)
 
 print("\nModel saved to models/random_forest.pkl")

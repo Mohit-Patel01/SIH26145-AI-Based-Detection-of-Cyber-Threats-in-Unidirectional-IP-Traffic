@@ -1,53 +1,44 @@
-from fastapi import FastAPI
-import pandas as pd
-from pathlib import Path
-from model import predict
-from schemas import PredictionRequest
+from fastapi import FastAPI, HTTPException
+from services.predictor import predict_flow
 
 
-app = FastAPI()
+app = FastAPI(
+    title="SIH26145 Cyber Threat Detection API",
+    description="AI-based detection of threats in unidirectional IP traffic",
+    version="1.0.0"
+)
 
 
 @app.get("/")
-def home():
+def root():
+
     return {
         "message": "SIH26145 Backend is running"
     }
 
 
+@app.get("/health")
+def health():
+
+    return {
+        "status": "healthy"
+    }
+
+
 @app.post("/predict")
-def make_prediction(request: PredictionRequest):
+def predict(features: dict):
 
-    data = pd.DataFrame([request.features])
+    try:
 
-    result = predict(data)
+        prediction = predict_flow(features)
 
-    return {
-        "prediction": result
-    }
-    
-@app.get("/test-predict")
-def test_prediction():
+        return {
+            "prediction": prediction
+        }
 
-    file_path = (
-        Path(__file__).resolve().parent.parent
-        / "MLmodel"
-        / "Dataset"
-        / "Raw"
-        / "MachineLearningCSV"
-        / "Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv"
-    )
+    except ValueError as e:
 
-    data = pd.read_csv(file_path)
-
-    data.columns = data.columns.str.strip()
-
-    sample = data[data["Label"] == "DDoS"].iloc[[0]]
-
-    X = sample.drop("Label", axis=1)
-
-    result = predict(X)
-
-    return {
-        "prediction": result
-    }
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
