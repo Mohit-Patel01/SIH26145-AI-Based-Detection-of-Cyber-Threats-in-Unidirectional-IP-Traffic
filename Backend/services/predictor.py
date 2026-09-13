@@ -46,4 +46,11 @@ def predict_flow(features):
 
     prediction = model.predict(df)[0]
 
-    return label_map[int(prediction)]
+    probabilities = model.predict_proba(df)[0]
+
+    score = probabilities[int(prediction)]
+
+    return {
+        "prediction": label_map[int(prediction)],
+        "score": float(score)
+    }
