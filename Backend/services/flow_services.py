@@ -38,8 +38,11 @@ def process_completed_flow(flow):
     # Calculate ML features
     features = calculate_all_features(flow)
 
-    # Get ML prediction
-    prediction = predict_flow(features)
+    # Get ML prediction and prediction score
+    result = predict_flow(features)
+
+    prediction = result["prediction"]
+    score = result["score"]
 
     # Calculate basic information for database
     timestamp = datetime.now().isoformat()
@@ -58,13 +61,19 @@ def process_completed_flow(flow):
     # Store detection in SQLite
     insert_detection(
         timestamp,
+        flow["source_ip"],
+        flow["destination_ip"],
         flow["source_port"],
         flow["destination_port"],
         flow["protocol"],
         packet_count,
         total_bytes,
         duration,
-        prediction
+        prediction,
+        score
     )
 
-    return prediction
+    return {
+        "prediction": prediction,
+        "score": score
+    }

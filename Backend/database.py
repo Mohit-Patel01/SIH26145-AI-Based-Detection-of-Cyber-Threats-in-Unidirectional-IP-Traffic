@@ -20,6 +20,9 @@ def create_database():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             timestamp TEXT,
 
+            source_ip TEXT,
+            destination_ip TEXT,
+
             source_port INTEGER,
             destination_port INTEGER,
             protocol INTEGER,
@@ -28,7 +31,8 @@ def create_database():
             total_bytes REAL,
             duration REAL,
 
-            prediction TEXT
+            prediction TEXT,
+            prediction_score REAL
         )
     """)
 
@@ -38,13 +42,16 @@ def create_database():
 
 def insert_detection(
     timestamp,
+    source_ip,
+    destination_ip,
     source_port,
     destination_port,
     protocol,
     packet_count,
     total_bytes,
     duration,
-    prediction
+    prediction,
+    prediction_score
 ):
 
     conn = sqlite3.connect(DB_PATH)
@@ -54,29 +61,142 @@ def insert_detection(
     cursor.execute("""
         INSERT INTO detections (
             timestamp,
+            source_ip,
+            destination_ip,
             source_port,
             destination_port,
             protocol,
             packet_count,
             total_bytes,
             duration,
-            prediction
+            prediction,
+            prediction_score
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
-        timestamp,
+         timestamp,
+        source_ip,
+        destination_ip,
         source_port,
         destination_port,
         protocol,
         packet_count,
         total_bytes,
         duration,
-        prediction
+        prediction,
+        prediction_score
     ))
+    
+
 
     conn.commit()
     conn.close()
 
+def get_recent_detections(limit=20):
+
+    conn = sqlite3.connect(DB_PATH)
+
+    conn.row_factory = sqlite3.Row
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            id,
+            timestamp,
+            source_ip,
+            destination_ip,
+            source_port,
+            destination_port,
+            protocol,
+            packet_count,
+            total_bytes,
+            duration,
+            prediction,
+            prediction_score
+        FROM detections
+        ORDER BY id DESC
+        LIMIT ?
+    """, (limit,))
+
+    rows = [dict(row) for row in cursor.fetchall()]
+
+    conn.close()
+
+    return rows
 
 # Create the database and table first
+
+def get_statistics():
+
+    conn = sqlite3.connect(DB_PATH)
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM detections
+    """)
+
+    total_flows = cursor.fetchone()[0]
+
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM detections
+        WHERE prediction = 'BENIGN'
+    """)
+
+    benign = cursor.fetchone()[0]
+
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM detections
+        WHERE prediction = 'DDoS'
+    """)
+
+    ddos = cursor.fetchone()[0]
+
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM detections
+        WHERE prediction = 'PortScan'
+    """)
+
+    portscan = cursor.fetchone()[0]
+
+    conn.close()
+
+    return {
+        "total_flows": total_flows,
+        "benign": benign,
+        "ddos": ddos,
+        "portscan": portscan
+    }
+    
+def get_detection_activity():
+
+    conn = sqlite3.connect(DB_PATH)
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            substr(timestamp, 12, 5) AS time,
+            COUNT(*) AS count
+        FROM detections
+        GROUP BY time
+        ORDER BY time
+    """)
+
+    rows = cursor.fetchall()
+
+    conn.close()
+
+    return [
+        {
+            "time": row[0],
+            "count": row[1]
+        }
+        for row in rows
+    ]
 create_database()
