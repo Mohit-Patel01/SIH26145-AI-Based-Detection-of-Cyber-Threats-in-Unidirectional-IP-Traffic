@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# macOS
+.DS_Store
+
+# Datasets
+MLmodel/Dataset/
+
+# SQLite database
+*.db
+
+# Node
+node_modules/
+
+# Environment files
+.env
