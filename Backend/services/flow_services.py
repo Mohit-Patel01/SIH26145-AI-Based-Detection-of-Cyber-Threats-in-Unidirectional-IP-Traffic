@@ -1,10 +1,10 @@
 import sys
 from pathlib import Path
 from datetime import datetime
-
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.append(str(PROJECT_ROOT / "Backend"))
+from database import insert_detection
 sys.path.append(str(PROJECT_ROOT / "Datacapture"))
-
 from capture import calculate_all_features
 from services.predictor import predict_flow
 
@@ -35,8 +35,36 @@ def check_completed_flows(flows):
 
 def process_completed_flow(flow):
 
+    # Calculate ML features
     features = calculate_all_features(flow)
 
+    # Get ML prediction
     prediction = predict_flow(features)
+
+    # Calculate basic information for database
+    timestamp = datetime.now().isoformat()
+
+    packet_count = len(flow["packets"])
+
+    total_bytes = sum(
+        packet["length"]
+        for packet in flow["packets"]
+    )
+
+    duration = (
+        flow["last_time"] - flow["start_time"]
+    ).total_seconds()
+
+    # Store detection in SQLite
+    insert_detection(
+        timestamp,
+        flow["source_port"],
+        flow["destination_port"],
+        flow["protocol"],
+        packet_count,
+        total_bytes,
+        duration,
+        prediction
+    )
 
     return prediction
