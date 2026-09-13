@@ -6,9 +6,32 @@ function Home() {
   const [recentScans, setRecentScans] = useState([]);
   const [stats, setStats] = useState(null);
 
+  // Settings
+  const [showSettings, setShowSettings] = useState(false);
+  const [apiIp, setApiIp] = useState(
+    localStorage.getItem("apiIp") || "127.0.0.1"
+  );
+  const [tempIp, setTempIp] = useState(
+    localStorage.getItem("apiIp") || "127.0.0.1"
+  );
+
+  const API_BASE = `http://${apiIp}:8000`;
+
+  const saveSettings = () => {
+    const cleanedIp = tempIp.trim();
+
+    if (!cleanedIp) {
+      return;
+    }
+
+    localStorage.setItem("apiIp", cleanedIp);
+    setApiIp(cleanedIp);
+    setShowSettings(false);
+  };
+
   useEffect(() => {
     const fetchScans = () => {
-      fetch("http://127.0.0.1:8000/recent-scans")
+      fetch(`${API_BASE}/recent-scans`)
         .then((response) => response.json())
         .then((data) => {
           setRecentScans(data.scans);
@@ -19,7 +42,7 @@ function Home() {
     };
 
     const fetchStats = () => {
-      fetch("http://127.0.0.1:8000/statistics")
+      fetch(`${API_BASE}/statistics`)
         .then((response) => response.json())
         .then((data) => {
           setStats(data);
@@ -38,11 +61,11 @@ function Home() {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [API_BASE]);
 
   useEffect(() => {
     const checkStatus = () => {
-      fetch("http://127.0.0.1:8000/scan-status")
+      fetch(`${API_BASE}/scan-status`)
         .then((response) => response.json())
         .then((data) => {
           setIsScanning(data.running);
@@ -57,7 +80,7 @@ function Home() {
     const interval = setInterval(checkStatus, 2000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [API_BASE]);
 
   const scan = recentScans.length > 0 ? recentScans[0] : null;
 
@@ -74,8 +97,8 @@ function Home() {
 
   const handleScanToggle = async () => {
     const endpoint = isScanning
-      ? "http://127.0.0.1:8000/stop-scan"
-      : "http://127.0.0.1:8000/start-scan";
+      ? `${API_BASE}/stop-scan`
+      : `${API_BASE}/start-scan`;
 
     try {
       const response = await fetch(endpoint, {
@@ -120,8 +143,10 @@ function Home() {
           </div>
 
           <div className="flex items-center gap-6">
-
-                <div className="flex items-center gap-2 border-r pr-6">
+            <div className="flex items-center gap-2 border-r pr-6 px-4 py-2 text-sm font-medium text-slate-600">
+              Current ip: {apiIp}:8000
+            </div>
+            <div className="flex items-center gap-2 border-r pr-6">
               <span
                 className={`h-3 w-3 rounded-full ${
                   isScanning
@@ -151,13 +176,90 @@ function Home() {
               >
                 Statistics
               </Link>
-            </nav>
 
-        
+              {/* Settings Button */}
+              <button
+                onClick={() => {
+                  setTempIp(apiIp);
+                  setShowSettings(true);
+                }}
+                className="flex h-10 w-10 items-center justify-center rounded-lg text-xl text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                title="Settings"
+              >
+                ⚙
+              </button>
+            </nav>
 
           </div>
         </div>
       </header>
+
+      {/* Settings Overlay */}
+      {showSettings && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/20 pt-24"
+          onClick={() => setShowSettings(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+
+            <div className="flex items-center justify-between">
+
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">
+                  Settings
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Configure backend connection
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowSettings(false)}
+                className="text-xl text-slate-400 transition hover:text-slate-700"
+              >
+                ×
+              </button>
+
+            </div>
+
+            <div className="mt-6">
+
+              <label className="text-sm font-medium text-slate-700">
+                Backend IP Address
+              </label>
+
+              <input
+                type="text"
+                value={tempIp}
+                onChange={(event) => setTempIp(event.target.value)}
+                placeholder="127.0.0.1"
+                className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 font-mono text-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+              />
+
+              <p className="mt-2 text-xs text-slate-400">
+                Example: 192.168.1.105
+              </p>
+
+            </div>
+
+            <button
+              onClick={saveSettings}
+              className="mt-6 w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+            >
+              Save Settings
+            </button>
+
+            <p className="mt-4 text-center text-xs text-slate-400">
+              Tap outside to go back
+            </p>
+
+          </div>
+        </div>
+      )}
 
       <main className="mx-auto max-w-7xl space-y-6 p-6">
 
@@ -259,7 +361,7 @@ function Home() {
         </section>
 
         {/* Live Detection Table */}
-        <section className="rounded-xl bg-white p-6 shadow-sm ">
+        <section className="rounded-xl bg-white p-6 shadow-sm">
 
           <div className="mb-5 flex items-center justify-between">
 
@@ -281,45 +383,45 @@ function Home() {
 
           <div className="max-h-96 overflow-auto">
 
-  <table className="w-full text-left text-sm">
+            <table className="w-full text-left text-sm">
 
-    <thead className="sticky top-0 z-10 bg-slate-50">
+              <thead className="sticky top-0 z-10 bg-slate-50">
 
-      <tr className="border-b text-xs uppercase tracking-wide text-slate-500">
+                <tr className="border-b text-xs uppercase tracking-wide text-slate-500">
 
-        <th className="px-4 py-3 font-semibold">
-          Time
-        </th>
+                  <th className="px-4 py-3 font-semibold">
+                    Time
+                  </th>
 
-        <th className="px-4 py-3 font-semibold">
-          Source IP
-        </th>
+                  <th className="px-4 py-3 font-semibold">
+                    Source IP
+                  </th>
 
-        <th className="px-4 py-3 font-semibold">
-          Destination IP
-        </th>
+                  <th className="px-4 py-3 font-semibold">
+                    Destination IP
+                  </th>
 
-        <th className="px-4 py-3 font-semibold">
-          Protocol
-        </th>
+                  <th className="px-4 py-3 font-semibold">
+                    Protocol
+                  </th>
 
-        <th className="px-4 py-3 font-semibold">
-          Packets
-        </th>
+                  <th className="px-4 py-3 font-semibold">
+                    Packets
+                  </th>
 
-        <th className="px-4 py-3 font-semibold">
-          Prediction
-        </th>
+                  <th className="px-4 py-3 font-semibold">
+                    Prediction
+                  </th>
 
-        <th className="px-4 py-3 font-semibold">
-          Confidence
-        </th>
+                  <th className="px-4 py-3 font-semibold">
+                    Confidence
+                  </th>
 
-      </tr>
+                </tr>
 
-    </thead>
+              </thead>
 
-    <tbody>
+              <tbody>
 
                 {recentScans.map((scan) => (
 
@@ -649,7 +751,6 @@ function Home() {
           </section>
         )}
 
-        {/* No Scan Data */}
         {!scan && (
           <section className="rounded-xl bg-white p-10 text-center shadow-sm">
 
