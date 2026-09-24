@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 
 function Home() {
   const [isScanning, setIsScanning] = useState(false);
   const [recentScans, setRecentScans] = useState([]);
   const [stats, setStats] = useState(null);
+  const [recentThreats, setRecentThreats] = useState([]);
+  const [alert, setAlert] = useState(null);
+  const lastThreatId = useRef(null);
 
   // Settings
   const [showSettings, setShowSettings] = useState(false);
@@ -29,6 +32,16 @@ function Home() {
     setShowSettings(false);
   };
 
+  // Request browser notification permission
+  useEffect(() => {
+    if ("Notification" in window) {
+      if (Notification.permission === "default") {
+        Notification.requestPermission();
+      }
+    }
+  }, []);
+
+  // Fetch dashboard data
   useEffect(() => {
     const fetchScans = () => {
       fetch(`${API_BASE}/recent-scans`)
@@ -38,6 +51,71 @@ function Home() {
         })
         .catch((error) => {
           console.error("Failed to fetch recent scans:", error);
+        });
+    };
+
+    const fetchThreats = () => {
+      fetch(`${API_BASE}/attacks`)
+        .then((response) => response.json())
+        .then((data) => {
+          setRecentThreats(data);
+
+          if (data.length === 0) {
+            return;
+          }
+
+          const latestThreat = data[0];
+
+          // First load
+          if (lastThreatId.current === null) {
+            lastThreatId.current = latestThreat.id;
+            return;
+          }
+
+          // New threat
+          if (latestThreat.id !== lastThreatId.current) {
+            lastThreatId.current = latestThreat.id;
+
+            const threatType = latestThreat.prediction;
+
+            // Show toast
+            setAlert({
+              id: latestThreat.id,
+              type: threatType,
+              source: latestThreat.source_ip,
+              destination: latestThreat.destination_ip,
+              score: latestThreat.prediction_score,
+            });
+
+            // Show browser notification
+            if (
+              "Notification" in window &&
+              Notification.permission === "granted"
+            ) {
+              new Notification(
+                threatType === "DDoS"
+                  ? "🚨 DDoS Attack Detected"
+                  : "⚠️ Port Scan Detected",
+                {
+                  body:
+                    `${latestThreat.source_ip} → ` +
+                    `${latestThreat.destination_ip}\n` +
+                    `Confidence: ${(
+                      latestThreat.prediction_score * 100
+                    ).toFixed(1)}%`,
+                  tag: `threat-${latestThreat.id}`,
+                }
+              );
+            }
+
+            // Automatically hide toast after 5 seconds
+            setTimeout(() => {
+              setAlert(null);
+            }, 5000);
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to fetch Threats:", error);
         });
     };
 
@@ -54,15 +132,18 @@ function Home() {
 
     fetchScans();
     fetchStats();
+    fetchThreats();
 
     const interval = setInterval(() => {
       fetchScans();
       fetchStats();
+      fetchThreats();
     }, 2000);
 
     return () => clearInterval(interval);
   }, [API_BASE]);
 
+  // Check scan status
   useEffect(() => {
     const checkStatus = () => {
       fetch(`${API_BASE}/scan-status`)
@@ -83,10 +164,6 @@ function Home() {
   }, [API_BASE]);
 
   const scan = recentScans.length > 0 ? recentScans[0] : null;
-
-  const recentThreats = recentScans.filter(
-    (scan) => scan.prediction !== "BENIGN"
-  );
 
   const getProtocolName = (protocol) => {
     if (protocol === 6) return "TCP";
@@ -128,6 +205,102 @@ function Home() {
   return (
     <div className="min-h-screen bg-slate-100">
 
+      {/* Threat Alert Toast */}
+      {alert && (
+        <div className="fixed right-6 top-6 z-[100] w-96 animate-[slideIn_0.3s_ease-out]">
+          <div
+            className={`rounded-xl border p-5 shadow-2xl ${
+              alert.type === "DDoS"
+                ? "border-red-200 bg-red-50"
+                : "border-orange-200 bg-orange-50"
+            }`}
+          >
+            <div className="flex items-start gap-4">
+
+              {/* Icon */}
+              <div
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl ${
+                  alert.type === "DDoS"
+                    ? "bg-red-100 text-red-600"
+                    : "bg-orange-100 text-orange-600"
+                }`}
+              >
+                {alert.type === "DDoS" ? "!" : "⚠"}
+              </div>
+
+              {/* Content */}
+              <div className="min-w-0 flex-1">
+
+                <div className="flex items-start justify-between gap-3">
+
+                  <div>
+                    <p
+                      className={`text-sm font-bold ${
+                        alert.type === "DDoS"
+                          ? "text-red-700"
+                          : "text-orange-700"
+                      }`}
+                    >
+                      {alert.type === "DDoS"
+                        ? "DDoS Attack Detected"
+                        : "Port Scan Detected"}
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-500">
+                      Behavioral analysis detected malicious activity.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => setAlert(null)}
+                    className="text-lg leading-none text-slate-400 hover:text-slate-700"
+                  >
+                    ×
+                  </button>
+
+                </div>
+
+                <div className="mt-4 space-y-1.5 text-xs">
+
+                  <div className="flex justify-between gap-3">
+                    <span className="text-slate-500">
+                      Source
+                    </span>
+
+                    <span className="font-mono font-semibold text-slate-700">
+                      {alert.source || "N/A"}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between gap-3">
+                    <span className="text-slate-500">
+                      Destination
+                    </span>
+
+                    <span className="font-mono font-semibold text-slate-700">
+                      {alert.destination || "N/A"}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between gap-3">
+                    <span className="text-slate-500">
+                      Confidence
+                    </span>
+
+                    <span className="font-semibold text-slate-700">
+                      {((alert.score || 0) * 100).toFixed(1)}%
+                    </span>
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="border-b bg-white px-8 py-5">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
@@ -143,10 +316,13 @@ function Home() {
           </div>
 
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2 border-r pr-6 px-4 py-2 text-sm font-medium text-slate-600">
+
+            <div className="flex items-center gap-2 border-r px-4 py-2 pr-6 text-sm font-medium text-slate-600">
               Current ip: {apiIp}:8000
             </div>
+
             <div className="flex items-center gap-2 border-r pr-6">
+
               <span
                 className={`h-3 w-3 rounded-full ${
                   isScanning
@@ -160,9 +336,11 @@ function Home() {
                   ? "LIVE MONITORING"
                   : "MONITORING OFF"}
               </span>
+
             </div>
 
             <nav className="flex items-center gap-2">
+
               <Link
                 to="/"
                 className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white"
@@ -188,6 +366,7 @@ function Home() {
               >
                 ⚙
               </button>
+
             </nav>
 
           </div>
@@ -539,17 +718,6 @@ function Home() {
               <h2 className="text-lg font-semibold text-slate-900">
                 Recent Threats
               </h2>
-
-              <span
-                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                  recentThreats.length > 0
-                    ? "bg-red-100 text-red-700"
-                    : "bg-green-100 text-green-700"
-                }`}
-              >
-                {recentThreats.length} detected
-              </span>
-
             </div>
 
             <p className="mt-1 text-sm text-slate-500">
@@ -558,11 +726,11 @@ function Home() {
 
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="max-h-96 overflow-auto rounded-lg">
 
             <table className="w-full text-left text-sm">
 
-              <thead>
+              <thead className="sticky top-0 z-10">
 
                 <tr className="border-b bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
 
@@ -596,7 +764,7 @@ function Home() {
 
               <tbody>
 
-                {recentThreats.map((threat) => (
+                {recentThreats.slice(0, 5).map((threat) => (
 
                   <tr
                     key={threat.id}
@@ -658,7 +826,7 @@ function Home() {
                         </div>
 
                         <p className="mt-3 font-medium text-slate-700">
-                          No threats detected
+                          No Threats detected
                         </p>
 
                         <p className="mt-1 text-sm text-slate-400">
@@ -678,6 +846,188 @@ function Home() {
             </table>
 
           </div>
+
+        </section>
+
+        {/* Alert History */}
+        <section className="rounded-xl bg-white p-6 shadow-sm">
+
+          <div className="mb-5 flex items-center justify-between">
+
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">
+                Alert History
+              </h2>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Latest 50 detected security threats
+              </p>
+            </div>
+
+            <div className="rounded-full bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600">
+              {stats ? stats.ddos + stats.portscan : 0} Total Alerts
+            </div>
+
+          </div>
+
+          {recentThreats.length === 0 ? (
+
+            <div className="rounded-lg border border-dashed border-slate-200 py-12 text-center">
+
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-50 text-xl text-green-600">
+                ✓
+              </div>
+
+              <p className="mt-3 font-medium text-slate-700">
+                No alerts in history
+              </p>
+
+              <p className="mt-1 text-sm text-slate-400">
+                Detected DDoS and Port Scan attacks will appear here.
+              </p>
+
+            </div>
+
+          ) : (
+
+            <div className="max-h-96 overflow-auto rounded-lg">
+
+              <table className="w-full text-left text-sm">
+
+                <thead className="sticky top-0 z-10">
+
+                  <tr className="border-b bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+
+                    <th className="px-4 py-3 font-semibold">
+                      Time
+                    </th>
+
+                    <th className="px-4 py-3 font-semibold">
+                      Threat
+                    </th>
+
+                    <th className="px-4 py-3 font-semibold">
+                      Source
+                    </th>
+
+                    <th className="px-4 py-3 font-semibold">
+                      Destination
+                    </th>
+
+                    <th className="px-4 py-3 font-semibold">
+                      Protocol
+                    </th>
+
+                    <th className="px-4 py-3 font-semibold">
+                      Packets
+                    </th>
+
+                    <th className="px-4 py-3 font-semibold">
+                      Bytes
+                    </th>
+
+                    <th className="px-4 py-3 font-semibold">
+                      Confidence
+                    </th>
+
+                  </tr>
+
+                </thead>
+
+                <tbody>
+
+                  {recentThreats.map((threat) => (
+
+                    <tr
+                      key={threat.id}
+                      className="border-b border-slate-100 last:border-0 transition hover:bg-slate-50"
+                    >
+
+                      {/* Time */}
+                      <td className="whitespace-nowrap px-4 py-4 text-slate-600">
+                        {threat.timestamp
+                          ? new Date(
+                              threat.timestamp
+                            ).toLocaleString()
+                          : "N/A"}
+                      </td>
+
+                      {/* Threat */}
+                      <td className="px-4 py-4">
+
+                        <PredictionBadge
+                          prediction={threat.prediction}
+                        />
+
+                      </td>
+
+                      {/* Source */}
+                      <td className="px-4 py-4">
+
+                        <span className="font-mono text-xs font-medium text-slate-700">
+                          {threat.source_ip || "N/A"}
+                        </span>
+
+                      </td>
+
+                      {/* Destination */}
+                      <td className="px-4 py-4">
+
+                        <span className="font-mono text-xs font-medium text-slate-700">
+                          {threat.destination_ip || "N/A"}
+                        </span>
+
+                      </td>
+
+                      {/* Protocol */}
+                      <td className="px-4 py-4">
+
+                        <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
+                          {getProtocolName(threat.protocol)}
+                        </span>
+
+                      </td>
+
+                      {/* Packets */}
+                      <td className="px-4 py-4 font-medium text-slate-700">
+                        {threat.packet_count ?? 0}
+                      </td>
+
+                      {/* Bytes */}
+                      <td className="px-4 py-4 font-medium text-slate-700">
+                        {threat.total_bytes
+                          ? Number(
+                              threat.total_bytes
+                            ).toLocaleString()
+                          : "0"}
+                      </td>
+
+                      {/* Confidence */}
+                      <td className="px-4 py-4">
+
+                        <span className="font-semibold text-slate-700">
+                          {threat.prediction_score != null
+                            ? `${(
+                                Number(
+                                  threat.prediction_score
+                                ) * 100
+                              ).toFixed(1)}%`
+                            : "N/A"}
+                        </span>
+
+                      </td>
+
+                    </tr>
+
+                  ))}
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          )}
 
         </section>
 

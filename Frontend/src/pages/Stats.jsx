@@ -62,6 +62,7 @@ function Stats() {
 
   }, []);
 
+
   // Loading state
   if (!stats) {
     return (
@@ -75,11 +76,13 @@ function Stats() {
     );
   }
 
+
   // Pie chart data
+  // BENIGN is capped at 50 only for visualization
   const chartData = [
     {
       name: "BENIGN",
-      value: stats.benign,
+      value: Math.min(stats.benign, 50),
     },
     {
       name: "DDoS",
@@ -91,79 +94,106 @@ function Stats() {
     },
   ];
 
+
+  // Pie chart colors
+  const colors = [
+    "#22c55e", // BENIGN - Green
+    "#ef4444", // DDoS - Red
+    "#f97316", // PortScan - Orange
+  ];
+
+
+  // Activity graph data
+  // Network flow count is capped at 50 only for visualization
+  const activityData = activity.map((item) => ({
+    ...item,
+    total: Math.min(item.total, 50),
+  }));
+
+
   return (
     <div className="min-h-screen bg-slate-100">
 
       {/* Header */}
-  <header className="border-b bg-white px-8 py-5">
-  <div className="flex items-center justify-between">
-    <div>
-      <h1 className="text-2xl font-bold text-slate-900">
-        SIH26145
-      </h1>
+      <header className="border-b bg-white px-8 py-5">
 
-      <p className="text-sm text-slate-500">
-        Cyber Threat Statistics
-      </p>
-    </div>
+        <div className="flex items-center justify-between">
 
-    <nav className="flex items-center gap-2">
-      <Link
-        to="/"
-        className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
-      >
-        Live Monitoring
-      </Link>
+          <div>
 
-      <Link
-        to="/stats"
-        className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white"
-      >
-        Statistics
-      </Link>
-    </nav>
-  </div>
-</header>
+            <h1 className="text-2xl font-bold text-slate-900">
+              SIH26145
+            </h1>
+
+            <p className="text-sm text-slate-500">
+              Cyber Threat Statistics
+            </p>
+
+          </div>
+
+
+          <nav className="flex items-center gap-2">
+
+            <Link
+              to="/"
+              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+            >
+              Live Monitoring
+            </Link>
+
+            <Link
+              to="/stats"
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white"
+            >
+              Statistics
+            </Link>
+
+          </nav>
+
+        </div>
+
+      </header>
 
 
       <main className="mx-auto max-w-7xl space-y-6 p-6">
 
         {/* Summary Cards */}
-      <section className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+        <section className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
 
-            <StatCard
-              title="Total Flows"
-              value={stats.total_flows}
-              icon="↗"
-              color="text-slate-700"
-              background="bg-slate-50"
-            />
+          <StatCard
+            title="Total Flows"
+            value={stats.total_flows}
+            icon="↗"
+            color="text-slate-700"
+            background="bg-slate-50"
+          />
 
-            <StatCard
-              title="Benign Flows"
-              value={stats.benign}
-              icon="✓"
-              color="text-green-600"
-              background="bg-green-50"
-            />
+          <StatCard
+            title="Benign Flows"
+            value={stats.benign}
+            icon="✓"
+            color="text-green-600"
+            background="bg-green-50"
+          />
 
-            <StatCard
-              title="DDoS Attacks"
-              value={stats.ddos}
-              icon="!"
-              color="text-red-600"
-              background="bg-red-50"
-            />
+          <StatCard
+            title="DDoS Attacks"
+            value={stats.ddos}
+            icon="!"
+            color="text-red-600"
+            background="bg-red-50"
+          />
 
-            <StatCard
-              title="PortScan Attacks"
-              value={stats.portscan}
-              icon="⚠"
-              color="text-orange-600"
-              background="bg-orange-50"
-            />
+          <StatCard
+            title="PortScan Attacks"
+            value={stats.portscan}
+            icon="⚠"
+            color="text-orange-600"
+            background="bg-orange-50"
+          />
 
-          </section>
+        </section>
+
 
         {/* Threat Distribution */}
         <section className="rounded-xl bg-white p-6 shadow-sm">
@@ -179,6 +209,7 @@ function Stats() {
             </p>
 
           </div>
+
 
           <div className="h-80">
 
@@ -202,6 +233,7 @@ function Stats() {
                   {chartData.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
+                      fill={colors[index]}
                     />
                   ))}
 
@@ -219,6 +251,7 @@ function Stats() {
 
         </section>
 
+
         {/* Detection Activity */}
         <section className="rounded-xl bg-white p-6 shadow-sm">
 
@@ -229,10 +262,11 @@ function Stats() {
             </h2>
 
             <p className="text-sm text-slate-500">
-              Number of network flows detected over time
+              Network flows and detected threats over time
             </p>
 
           </div>
+
 
           <div className="h-80">
 
@@ -241,7 +275,7 @@ function Stats() {
               height="100%"
             >
 
-              <LineChart data={activity}>
+              <LineChart data={activityData}>
 
                 <CartesianGrid strokeDasharray="3 3" />
 
@@ -251,9 +285,34 @@ function Stats() {
 
                 <Tooltip />
 
+                <Legend />
+
+                {/* Network Flows */}
                 <Line
                   type="monotone"
-                  dataKey="count"
+                  dataKey="total"
+                  name="Network Flows"
+                  stroke="#64748b"
+                  strokeWidth={2}
+                  dot={false}
+                />
+
+                {/* DDoS Attacks */}
+                <Line
+                  type="monotone"
+                  dataKey="ddos"
+                  name="DDoS Attacks"
+                  stroke="#ef4444"
+                  strokeWidth={2}
+                  dot={false}
+                />
+
+                {/* PortScan Attacks */}
+                <Line
+                  type="monotone"
+                  dataKey="portscan"
+                  name="PortScan Attacks"
+                  stroke="#f97316"
                   strokeWidth={2}
                   dot={false}
                 />
@@ -272,6 +331,7 @@ function Stats() {
   );
 }
 
+
 function StatCard({
   title,
   value,
@@ -279,6 +339,7 @@ function StatCard({
   color,
   background,
 }) {
+
   return (
     <div className="rounded-xl bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
 
@@ -297,6 +358,7 @@ function StatCard({
           </p>
 
         </div>
+
 
         <div
           className={`flex h-10 w-10 items-center justify-center rounded-lg text-lg font-bold ${background} ${color}`}

@@ -43,10 +43,16 @@ def predict_flow(features):
         [ordered_features],
         columns=feature_names
     )
-
     prediction = model.predict(df)[0]
 
     probabilities = model.predict_proba(df)[0]
+    
+    print("\n========== RANDOM FOREST ==========")
+    print("Prediction:", label_map[int(prediction)])
+    print("BENIGN:", probabilities[0])
+    print("DDoS:", probabilities[1])
+    print("PortScan:", probabilities[2])
+    print("==================================")
 
     score = probabilities[int(prediction)]
 

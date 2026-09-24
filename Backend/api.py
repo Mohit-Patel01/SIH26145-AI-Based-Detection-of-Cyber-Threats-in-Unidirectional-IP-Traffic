@@ -129,7 +129,19 @@ def get_attacks():
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT *
+        SELECT
+            id,
+            timestamp,
+            source_ip,
+            destination_ip,
+            source_port,
+            destination_port,
+            protocol,
+            packet_count,
+            total_bytes,
+            duration,
+            prediction,
+            prediction_score
         FROM detections
         WHERE prediction != 'BENIGN'
         ORDER BY id DESC
@@ -146,13 +158,16 @@ def get_attacks():
         attacks.append({
             "id": row[0],
             "timestamp": row[1],
-            "source_port": row[2],
-            "destination_port": row[3],
-            "protocol": row[4],
-            "packet_count": row[5],
-            "total_bytes": row[6],
-            "duration": row[7],
-            "prediction": row[8]
+            "source_ip": row[2],
+            "destination_ip": row[3],
+            "source_port": row[4],
+            "destination_port": row[5],
+            "protocol": row[6],
+            "packet_count": row[7],
+            "total_bytes": row[8],
+            "duration": row[9],
+            "prediction": row[10],
+            "prediction_score": row[11]
         })
 
     return attacks

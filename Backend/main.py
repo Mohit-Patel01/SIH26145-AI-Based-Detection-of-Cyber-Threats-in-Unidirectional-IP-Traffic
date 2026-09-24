@@ -4,7 +4,8 @@ from services.predictor import predict_flow
 from database import (
     get_recent_detections,
     get_statistics,
-    get_detection_activity
+    get_detection_activity,
+    get_attacks
 )
 import subprocess
 import sys
@@ -118,6 +119,11 @@ def recent_scans(limit: int = 20):
     return {
         "scans": scans
     }
+    
+@app.get("/attacks")
+def attacks(limit: int = 20):
+
+    return get_attacks(limit)
 
 @app.post("/predict")
 def predict(features: dict):

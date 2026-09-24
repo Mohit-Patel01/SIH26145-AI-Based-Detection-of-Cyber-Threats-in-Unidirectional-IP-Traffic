@@ -9,6 +9,11 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(BASE_DIR, "Database", "cyber_threats.db")
 
 
+# Create a database connection
+def get_connection():
+    return sqlite3.connect(DB_PATH)
+
+
 def create_database():
 
     conn = sqlite3.connect(DB_PATH)
@@ -74,7 +79,7 @@ def insert_detection(
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
-         timestamp,
+        timestamp,
         source_ip,
         destination_ip,
         source_port,
@@ -86,13 +91,63 @@ def insert_detection(
         prediction,
         prediction_score
     ))
-    
-
 
     conn.commit()
     conn.close()
 
-def get_recent_detections(limit=20):
+
+def get_attacks(limit: int = 50):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            id,
+            timestamp,
+            source_ip,
+            destination_ip,
+            source_port,
+            destination_port,
+            protocol,
+            packet_count,
+            total_bytes,
+            duration,
+            prediction,
+            prediction_score
+        FROM detections
+        WHERE prediction != 'BENIGN'
+        ORDER BY id DESC
+        LIMIT ?
+    """, (limit,))
+
+    rows = cursor.fetchall()
+
+    conn.close()
+
+    attacks = []
+
+    for row in rows:
+
+        attacks.append({
+            "id": row[0],
+            "timestamp": row[1],
+            "source_ip": row[2],
+            "destination_ip": row[3],
+            "source_port": row[4],
+            "destination_port": row[5],
+            "protocol": row[6],
+            "packet_count": row[7],
+            "total_bytes": row[8],
+            "duration": row[9],
+            "prediction": row[10],
+            "prediction_score": row[11]
+        })
+
+    return attacks
+
+
+def get_recent_detections(limit=200):
 
     conn = sqlite3.connect(DB_PATH)
 
@@ -125,7 +180,6 @@ def get_recent_detections(limit=20):
 
     return rows
 
-# Create the database and table first
 
 def get_statistics():
 
@@ -172,31 +226,36 @@ def get_statistics():
         "ddos": ddos,
         "portscan": portscan
     }
-    
+
+
 def get_detection_activity():
-
     conn = sqlite3.connect(DB_PATH)
-
     cursor = conn.cursor()
 
     cursor.execute("""
         SELECT
             substr(timestamp, 12, 5) AS time,
-            COUNT(*) AS count
+            COUNT(*) AS total,
+            SUM(CASE WHEN prediction = 'DDoS' THEN 1 ELSE 0 END) AS ddos,
+            SUM(CASE WHEN prediction = 'PortScan' THEN 1 ELSE 0 END) AS portscan
         FROM detections
         GROUP BY time
         ORDER BY time
     """)
 
     rows = cursor.fetchall()
-
     conn.close()
 
     return [
         {
             "time": row[0],
-            "count": row[1]
+            "total": row[1],
+            "ddos": row[2],
+            "portscan": row[3]
         }
         for row in rows
     ]
+
+
+# Create the database and table first
 create_database()
